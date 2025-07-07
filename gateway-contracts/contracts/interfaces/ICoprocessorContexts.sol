@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 pragma solidity ^0.8.24;
 
-import { Coprocessor, CoprocessorContextBlockPeriods, CoprocessorContext } from "../shared/Structs.sol";
+import { Coprocessor, CoprocessorContextTimePeriods, CoprocessorContext } from "../shared/Structs.sol";
 import { ContextStatus } from "../shared/Enums.sol";
 
 /**
@@ -27,27 +27,27 @@ interface ICoprocessorContexts {
      * track coprocessor context updates.
      * @param activeCoprocessorContext The current active coprocessor context.
      * @param newCoprocessorContext The new coprocessor context.
-     * @param blockPeriods The block periods for the new coprocessor context.
+     * @param timePeriods The time periods for the new coprocessor context.
      */
     event NewCoprocessorContext(
         CoprocessorContext activeCoprocessorContext,
         CoprocessorContext newCoprocessorContext,
-        CoprocessorContextBlockPeriods blockPeriods
+        CoprocessorContextTimePeriods timePeriods
     );
 
     /**
      * @notice Emitted when a new coprocessor context gets pre-activated.
      * @param newCoprocessorContext The new coprocessor context.
-     * @param activationBlockNumber The block number at which the coprocessor context will be activated.
+     * @param activationBlockTimestamp The block timestamp at which the coprocessor context will be activated.
      */
-    event PreActivateCoprocessorContext(CoprocessorContext newCoprocessorContext, uint256 activationBlockNumber);
+    event PreActivateCoprocessorContext(CoprocessorContext newCoprocessorContext, uint256 activationBlockTimestamp);
 
     /**
      * @notice Emitted when a coprocessor context gets suspended.
      * @param contextId The ID of the coprocessor context.
-     * @param deactivatedBlockNumber The block number at which the coprocessor context will be deactivated.
+     * @param deactivatedBlockTimestamp The block timestamp at which the coprocessor context will be deactivated.
      */
-    event SuspendCoprocessorContext(uint256 contextId, uint256 deactivatedBlockNumber);
+    event SuspendCoprocessorContext(uint256 contextId, uint256 deactivatedBlockTimestamp);
 
     /**
      * @notice Emitted when a coprocessor context gets activated.
@@ -191,12 +191,12 @@ interface ICoprocessorContexts {
      * @notice Add a new coprocessor context.
      * @param featureSet The feature set.
      * @param coprocessors The set of coprocessors representing the coprocessor context.
-     * @param blockPeriods The block periods.
+     * @param timePeriods The time periods.
      */
     function addCoprocessorContext(
         uint256 featureSet,
         Coprocessor[] calldata coprocessors,
-        CoprocessorContextBlockPeriods calldata blockPeriods
+        CoprocessorContextTimePeriods calldata timePeriods
     ) external;
 
     /**
@@ -249,18 +249,18 @@ interface ICoprocessorContexts {
     function isCoprocessorContextActiveOrSuspended(uint256 contextId) external view returns (bool);
 
     /**
-     * @notice Get the block number at which the coprocessor context is activated.
+     * @notice Get the block timestamp at which the coprocessor context is activated.
      * @param contextId The coprocessor context ID.
-     * @return The activation block number.
+     * @return The activation block timestamp.
      */
-    function getCoprocessorContextActivationBlockNumber(uint256 contextId) external view returns (uint256);
+    function getCoprocessorContextActivationBlockTimestamp(uint256 contextId) external view returns (uint256);
 
     /**
-     * @notice Get the block number at which the coprocessor context is deactivated.
+     * @notice Get the block timestamp at which the coprocessor context is deactivated.
      * @param contextId The coprocessor context ID.
-     * @return The deactivation block number.
+     * @return The deactivation block timestamp.
      */
-    function getCoprocessorContextDeactivatedBlockNumber(uint256 contextId) external view returns (uint256);
+    function getCoprocessorContextDeactivatedBlockTimestamp(uint256 contextId) external view returns (uint256);
 
     /**
      * @notice Get the coprocessor majority threshold for a coprocessor context.

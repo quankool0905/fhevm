@@ -43,12 +43,12 @@ struct CoprocessorContext {
     Coprocessor[] coprocessors;
 }
 
-/// @notice Struct that represents the block periods for a coprocessor context
-struct CoprocessorContextBlockPeriods {
-    /// @notice The block period for the pre-activation period (before activating the coprocessor context)
-    uint256 preActivationBlockPeriod;
-    /// @notice The block period for the suspended period (before deactivating the previous coprocessor context)
-    uint256 suspendedBlockPeriod;
+/// @notice Struct that represents the time periods for a coprocessor context
+struct CoprocessorContextTimePeriods {
+    /// @notice The time period for the pre-activation period (before activating the coprocessor context)
+    uint256 preActivationTimePeriod;
+    /// @notice The time period for the suspended period (before deactivating the previous coprocessor context)
+    uint256 suspendedTimePeriod;
 }
 
 /// @notice Struct that represents a custodian

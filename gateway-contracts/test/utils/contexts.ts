@@ -1,10 +1,10 @@
-import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish, HDNodeWallet, Wallet } from "ethers";
 
 import { createAndFundRandomWallets, createRandomWallets } from ".";
 import { CoprocessorContexts } from "../../typechain-types";
 import {
-  CoprocessorContextBlockPeriodsStruct,
+  CoprocessorContextTimePeriodsStruct,
   CoprocessorStruct,
 } from "../../typechain-types/contracts/interfaces/ICoprocessorContexts";
 
@@ -59,12 +59,12 @@ export async function addNewCoprocessorContext(
   // Define coprocessor context fields
   const featureSet = 2030;
 
-  // Define block periods
-  const coprocessorsPreActivationBlockPeriod = 100;
-  const coprocessorsSuspendedBlockPeriod = 100;
-  const blockPeriods: CoprocessorContextBlockPeriodsStruct = {
-    preActivationBlockPeriod: coprocessorsPreActivationBlockPeriod,
-    suspendedBlockPeriod: coprocessorsSuspendedBlockPeriod,
+  // Define time periods
+  const coprocessorsPreActivationTimePeriod = 100;
+  const coprocessorsSuspendedTimePeriod = 100;
+  const timePeriods: CoprocessorContextTimePeriodsStruct = {
+    preActivationTimePeriod: coprocessorsPreActivationTimePeriod,
+    suspendedTimePeriod: coprocessorsSuspendedTimePeriod,
   };
 
   let result: {
@@ -82,21 +82,21 @@ export async function addNewCoprocessorContext(
   }
 
   // Add a new coprocessor context
-  await coprocessorContexts.connect(owner).addCoprocessorContext(featureSet, result.coprocessors, blockPeriods);
+  await coprocessorContexts.connect(owner).addCoprocessorContext(featureSet, result.coprocessors, timePeriods);
 
   return {
     ...result,
     featureSet,
-    blockPeriods,
+    timePeriods,
   };
 }
 
-export async function refreshCoprocessorContextAfterBlockPeriod(
-  blockPeriod: BigNumberish,
+export async function refreshCoprocessorContextAfterTimePeriod(
+  timePeriod: BigNumberish,
   coprocessorContexts: CoprocessorContexts,
 ) {
-  // Mine the number of blocks
-  await mine(blockPeriod);
+  // Increase the block timestamp to reach the end of the time period
+  await time.increase(timePeriod);
 
   // Refresh the statuses of coprocessor contexts
   await coprocessorContexts.refreshCoprocessorContextStatuses();

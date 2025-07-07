@@ -60,9 +60,9 @@ describe("Mock contracts", function () {
     coprocessors: [],
   };
 
-  const DefaultCoprocessorContextBlockPeriods = {
-    preActivationBlockPeriod: DefaultUint256,
-    suspendedBlockPeriod: DefaultUint256,
+  const DefaultCoprocessorContextTimePeriods = {
+    preActivationTimePeriod: DefaultUint256,
+    suspendedTimePeriod: DefaultUint256,
   };
 
   const DefaultCustodian = {
@@ -150,7 +150,7 @@ describe("Mock contracts", function () {
         coprocessorContextsMock.addCoprocessorContext(
           DefaultUint256,
           [DefaultCoprocessor],
-          DefaultCoprocessorContextBlockPeriods,
+          DefaultCoprocessorContextTimePeriods,
         ),
       )
         .to.emit(coprocessorContextsMock, "PreActivateCoprocessorContext")

@@ -94,7 +94,7 @@ The complete lifecycle of a coprocessor context is represented in the following 
 
 ### Automatic status refresh
 
-Coprocessor context statuses that need to be updated based on the current block number are refreshed using the `refreshCoprocessorContextStatuses` function. This function can be called by anyone, but most importantly, it is called by any of the following functions as a pre-hook modifier:
+Coprocessor context statuses that need to be updated based on the current block timestamp are refreshed using the `refreshCoprocessorContextStatuses` function. This function can be called by anyone, but most importantly, it is called by any of the following functions as a pre-hook modifier:
 
 - in `CiphertextCommits` contract:
   - `addCiphertextMaterial`

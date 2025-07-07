@@ -1,5 +1,5 @@
 import { HardhatEthersSigner, SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { HDNodeWallet, Wallet } from "ethers";
 import hre from "hardhat";
@@ -11,7 +11,7 @@ import {
   MultichainAcl,
   MultichainAcl__factory,
 } from "../typechain-types";
-import { CoprocessorContextBlockPeriodsStruct } from "../typechain-types/contracts/interfaces/ICoprocessorContexts";
+import { CoprocessorContextTimePeriodsStruct } from "../typechain-types/contracts/interfaces/ICoprocessorContexts";
 // The type needs to be imported separately because it is not properly detected by the linter
 // as this type is defined as a shared structs instead of directly in the IMultichainAcl interface
 import { DelegationAccountsStruct } from "../typechain-types/contracts/interfaces/IMultichainAcl";
@@ -24,7 +24,7 @@ import {
   createRandomWallet,
   loadHostChainIds,
   loadTestVariablesFixture,
-  refreshCoprocessorContextAfterBlockPeriod,
+  refreshCoprocessorContextAfterTimePeriod,
   toValues,
 } from "./utils";
 
@@ -155,7 +155,7 @@ describe("MultichainAcl", function () {
     });
 
     describe("Context changes", async function () {
-      let blockPeriods: CoprocessorContextBlockPeriodsStruct;
+      let timePeriods: CoprocessorContextTimePeriodsStruct;
 
       // Define the new expected context ID
       const newContextId = 2;
@@ -168,7 +168,7 @@ describe("MultichainAcl", function () {
         // Add a new coprocessor context using a bigger set of coprocessors with different tx sender
         // and signer addresses
         const newCoprocessorContext = await addNewCoprocessorContext(10, coprocessorContexts, owner);
-        blockPeriods = newCoprocessorContext.blockPeriods;
+        timePeriods = newCoprocessorContext.timePeriods;
       });
 
       it("Should allow account with suspended context", async function () {
@@ -182,10 +182,10 @@ describe("MultichainAcl", function () {
 
       it("Should revert because the context is no longer valid", async function () {
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Wait for the suspended period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.suspendedBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.suspendedTimePeriod, coprocessorContexts);
 
         // Check that allow account request that has already been registered under an active context
         // reverts because this context is no longer valid
@@ -200,7 +200,7 @@ describe("MultichainAcl", function () {
         const newCtHandle2 = createCtHandle(hostChainId);
 
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Make sure the old context has been suspended
         expect(await coprocessorContexts.getCoprocessorContextStatus(contextId)).to.equal(ContextStatus.Suspended);
@@ -269,7 +269,7 @@ describe("MultichainAcl", function () {
     });
 
     describe("Context changes", async function () {
-      let blockPeriods: CoprocessorContextBlockPeriodsStruct;
+      let timePeriods: CoprocessorContextTimePeriodsStruct;
       let newCoprocessorTxSenders: HDNodeWallet[];
 
       // Define the new expected context ID
@@ -283,7 +283,7 @@ describe("MultichainAcl", function () {
         // Add a new coprocessor context using a bigger set of coprocessors with different tx sender
         // and signer addresses
         const newCoprocessorContext = await addNewCoprocessorContext(10, coprocessorContexts, owner, true);
-        blockPeriods = newCoprocessorContext.blockPeriods;
+        timePeriods = newCoprocessorContext.timePeriods;
         newCoprocessorTxSenders = newCoprocessorContext.coprocessorTxSenders;
       });
 
@@ -292,8 +292,8 @@ describe("MultichainAcl", function () {
         // registered under the first active context (ID 1)
         const newCtHandle2 = createCtHandle(hostChainId);
 
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(blockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(timePeriods.preActivationTimePeriod);
 
         // Allow a new handle with the first new coprocessor transaction sender
         await multichainAcl.connect(newCoprocessorTxSenders[0]).allowPublicDecrypt(newCtHandle2);
@@ -310,14 +310,14 @@ describe("MultichainAcl", function () {
         // registered under the first active context (ID 1)
         const newCtHandle2 = createCtHandle(hostChainId);
 
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(blockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(timePeriods.preActivationTimePeriod);
 
         // Allow a new handle with the first new coprocessor transaction sender
         await multichainAcl.connect(newCoprocessorTxSenders[0]).allowPublicDecrypt(newCtHandle2);
 
-        // Then mine the number of blocks required for the suspended period to pass
-        await mine(blockPeriods.suspendedBlockPeriod);
+        // Increase the block timestamp to reach the end of the suspended period
+        await time.increase(timePeriods.suspendedTimePeriod);
 
         // Allow a new handle with the second new coprocessor transaction sender
         await multichainAcl.connect(newCoprocessorTxSenders[1]).allowPublicDecrypt(newCtHandle2);
@@ -328,7 +328,7 @@ describe("MultichainAcl", function () {
 
       it("Should allow public decryption with suspended context", async function () {
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // The second transaction should reach consensus and thus emit the expected event
         // This is because the consensus is reached amongst the suspended context (3 coprocessors)
@@ -340,10 +340,10 @@ describe("MultichainAcl", function () {
 
       it("Should revert because the context is no longer valid", async function () {
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Wait for the suspended period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.suspendedBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.suspendedTimePeriod, coprocessorContexts);
 
         // Check that allow public decrypt request that has already been registered under an active context
         // reverts because this context is no longer valid
@@ -358,7 +358,7 @@ describe("MultichainAcl", function () {
         const newCtHandle2 = createCtHandle(hostChainId);
 
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Make sure the old context has been suspended
         expect(await coprocessorContexts.getCoprocessorContextStatus(contextId)).to.equal(ContextStatus.Suspended);
@@ -502,7 +502,7 @@ describe("MultichainAcl", function () {
     });
 
     describe("Context changes", async function () {
-      let blockPeriods: CoprocessorContextBlockPeriodsStruct;
+      let timePeriods: CoprocessorContextTimePeriodsStruct;
 
       // Define the new expected context ID
       const newContextId = 2;
@@ -517,7 +517,7 @@ describe("MultichainAcl", function () {
         // Add a new coprocessor context using a bigger set of coprocessors with different tx sender
         // and signer addresses
         const newCoprocessorContext = await addNewCoprocessorContext(10, coprocessorContexts, owner);
-        blockPeriods = newCoprocessorContext.blockPeriods;
+        timePeriods = newCoprocessorContext.timePeriods;
       });
 
       it("Should allow public decryption with suspended context", async function () {
@@ -535,10 +535,10 @@ describe("MultichainAcl", function () {
 
       it("Should revert because the context is no longer valid", async function () {
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Wait for the suspended period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.suspendedBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.suspendedTimePeriod, coprocessorContexts);
 
         // Check that delegate account request that has already been registered under an active context
         // reverts because this context is no longer valid
@@ -563,7 +563,7 @@ describe("MultichainAcl", function () {
         const newHostChainId = hostChainIds[1];
 
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Make sure the old context has been suspended
         expect(await coprocessorContexts.getCoprocessorContextStatus(contextId)).to.equal(ContextStatus.Suspended);

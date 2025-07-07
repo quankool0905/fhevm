@@ -1,5 +1,5 @@
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { HDNodeWallet, Wallet } from "ethers";
 import hre from "hardhat";
@@ -11,7 +11,7 @@ import {
   GatewayConfig,
   InputVerification,
 } from "../typechain-types";
-import { CoprocessorContextBlockPeriodsStruct } from "../typechain-types/contracts/interfaces/ICoprocessorContexts";
+import { CoprocessorContextTimePeriodsStruct } from "../typechain-types/contracts/interfaces/ICoprocessorContexts";
 import {
   ContextStatus,
   addNewCoprocessorContext,
@@ -22,7 +22,7 @@ import {
   fund,
   loadHostChainIds,
   loadTestVariablesFixture,
-  refreshCoprocessorContextAfterBlockPeriod,
+  refreshCoprocessorContextAfterTimePeriod,
 } from "./utils";
 
 describe("CiphertextCommits", function () {
@@ -235,7 +235,7 @@ describe("CiphertextCommits", function () {
     // TODO: Add test checking `checkCurrentKeyId` once keys are generated through the Gateway
 
     describe("Context changes", async function () {
-      let blockPeriods: CoprocessorContextBlockPeriodsStruct;
+      let timePeriods: CoprocessorContextTimePeriodsStruct;
       let newCoprocessorTxSenders: HDNodeWallet[];
 
       // Define the new expected context ID
@@ -251,13 +251,13 @@ describe("CiphertextCommits", function () {
         // Add a new coprocessor context using a bigger set of coprocessors with different tx sender
         // and signer addresses
         const newCoprocessorContext = await addNewCoprocessorContext(10, coprocessorContexts, owner, true);
-        blockPeriods = newCoprocessorContext.blockPeriods;
+        timePeriods = newCoprocessorContext.timePeriods;
         newCoprocessorTxSenders = newCoprocessorContext.coprocessorTxSenders;
       });
 
       it("Should activate the new context and suspend the old one", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(blockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(timePeriods.preActivationTimePeriod);
 
         // Add a new ciphertext material with the first new coprocessor transaction sender
         await ciphertextCommits
@@ -272,16 +272,16 @@ describe("CiphertextCommits", function () {
       });
 
       it("Should deactivate the suspended context", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(blockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(timePeriods.preActivationTimePeriod);
 
         // Add a new ciphertext material with the first new coprocessor transaction sender
         await ciphertextCommits
           .connect(newCoprocessorTxSenders[0])
           .addCiphertextMaterial(newCtHandle, keyId, ciphertextDigest, snsCiphertextDigest);
 
-        // Then mine the number of blocks required for the suspended period to pass
-        await mine(blockPeriods.suspendedBlockPeriod);
+        // Increase the block timestamp to reach the end of the suspended period
+        await time.increase(timePeriods.suspendedTimePeriod);
 
         // Add a new ciphertext material with the second new coprocessor transaction sender
         await ciphertextCommits
@@ -310,10 +310,10 @@ describe("CiphertextCommits", function () {
 
       it("Should revert because the context is no longer valid", async function () {
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Wait for the suspended period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.suspendedBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.suspendedTimePeriod, coprocessorContexts);
 
         // Check that adding a ciphertext material that has already been registered under an active context
         // reverts because this context is no longer valid
@@ -328,7 +328,7 @@ describe("CiphertextCommits", function () {
 
       it("Should revert because the transaction sender is a coprocessor from the suspended context", async function () {
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+        await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
         // Make sure the old context has been suspended
         expect(await coprocessorContexts.getCoprocessorContextStatus(contextId)).to.equal(ContextStatus.Suspended);

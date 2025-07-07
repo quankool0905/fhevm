@@ -9,12 +9,12 @@ contract CoprocessorContextsMock {
     event NewCoprocessorContext(
         CoprocessorContext activeCoprocessorContext,
         CoprocessorContext newCoprocessorContext,
-        CoprocessorContextBlockPeriods blockPeriods
+        CoprocessorContextTimePeriods timePeriods
     );
 
-    event PreActivateCoprocessorContext(CoprocessorContext newCoprocessorContext, uint256 activationBlockNumber);
+    event PreActivateCoprocessorContext(CoprocessorContext newCoprocessorContext, uint256 activationBlockTimestamp);
 
-    event SuspendCoprocessorContext(uint256 contextId, uint256 deactivatedBlockNumber);
+    event SuspendCoprocessorContext(uint256 contextId, uint256 deactivatedBlockTimestamp);
 
     event ActivateCoprocessorContext(uint256 contextId);
 
@@ -36,22 +36,22 @@ contract CoprocessorContextsMock {
     function addCoprocessorContext(
         uint256 featureSet,
         Coprocessor[] calldata coprocessors,
-        CoprocessorContextBlockPeriods calldata blockPeriods
+        CoprocessorContextTimePeriods calldata timePeriods
     ) external {
         CoprocessorContext memory activeCoprocessorContext;
         CoprocessorContext memory newCoprocessorContext;
-        uint256 activationBlockNumber;
+        uint256 activationBlockTimestamp;
 
-        emit NewCoprocessorContext(activeCoprocessorContext, newCoprocessorContext, blockPeriods);
+        emit NewCoprocessorContext(activeCoprocessorContext, newCoprocessorContext, timePeriods);
 
-        emit PreActivateCoprocessorContext(newCoprocessorContext, activationBlockNumber);
+        emit PreActivateCoprocessorContext(newCoprocessorContext, activationBlockTimestamp);
     }
 
     function refreshCoprocessorContextStatuses() external {
         uint256 contextId;
-        uint256 deactivatedBlockNumber;
+        uint256 deactivatedBlockTimestamp;
 
-        emit SuspendCoprocessorContext(contextId, deactivatedBlockNumber);
+        emit SuspendCoprocessorContext(contextId, deactivatedBlockTimestamp);
 
         emit ActivateCoprocessorContext(contextId);
 

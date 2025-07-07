@@ -1,5 +1,5 @@
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture, mine } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ContractFactory, Wallet } from "ethers";
 import hre from "hardhat";
@@ -8,8 +8,8 @@ import { CoprocessorContexts, EmptyUUPSProxy } from "../typechain-types";
 // The type needs to be imported separately because it is not properly detected by the linter
 // as this type is defined as a shared structs instead of directly in the IDecryption interface
 import {
-  CoprocessorContextBlockPeriodsStruct,
   CoprocessorContextStruct,
+  CoprocessorContextTimePeriodsStruct,
   CoprocessorStruct,
 } from "../typechain-types/contracts/interfaces/ICoprocessorContexts";
 import {
@@ -18,7 +18,7 @@ import {
   createCoprocessors,
   createRandomWallet,
   loadTestVariablesFixture,
-  refreshCoprocessorContextAfterBlockPeriod,
+  refreshCoprocessorContextAfterTimePeriod,
   toValues,
 } from "./utils";
 
@@ -234,7 +234,7 @@ describe("CoprocessorContexts", function () {
       });
 
       describe("Context changes", function () {
-        let blockPeriods: CoprocessorContextBlockPeriodsStruct;
+        let timePeriods: CoprocessorContextTimePeriodsStruct;
 
         // Define the new expected context ID
         const newContextId = 2;
@@ -242,7 +242,7 @@ describe("CoprocessorContexts", function () {
         beforeEach(async function () {
           // Add a new coprocessor context
           const newCoprocessorContext = await addNewCoprocessorContext(3, coprocessorContexts, owner);
-          blockPeriods = newCoprocessorContext.blockPeriods;
+          timePeriods = newCoprocessorContext.timePeriods;
         });
 
         it("Should get the pre-activation context ID", async function () {
@@ -254,7 +254,7 @@ describe("CoprocessorContexts", function () {
 
         it("Should get the suspended context ID", async function () {
           // Wait for the pre activation period to pass
-          await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+          await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
           const suspendedContextId = await coprocessorContexts.getSuspendedCoprocessorContextId();
 
@@ -264,10 +264,10 @@ describe("CoprocessorContexts", function () {
 
         it("Should get the new active context ID", async function () {
           // Wait for the pre activation period to pass
-          await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+          await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
           // Wait for the suspended period to pass
-          await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.suspendedBlockPeriod, coprocessorContexts);
+          await refreshCoprocessorContextAfterTimePeriod(timePeriods.suspendedTimePeriod, coprocessorContexts);
 
           const activeContextId = await coprocessorContexts.getActiveCoprocessorContextId();
 
@@ -275,32 +275,33 @@ describe("CoprocessorContexts", function () {
           expect(activeContextId).to.equal(newContextId);
         });
 
-        it("Should get the new context activation block number", async function () {
-          // Get the current block number
-          const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
+        it("Should get the new context activation block timestamp", async function () {
+          // Get the latest block timestamp
+          const latestBlockTimestamp = await time.latest();
 
-          const activationBlockNumber =
-            await coprocessorContexts.getCoprocessorContextActivationBlockNumber(newContextId);
+          const activationBlockTimestamp =
+            await coprocessorContexts.getCoprocessorContextActivationBlockTimestamp(newContextId);
 
-          const expectedActivationBlockNumber =
-            BigInt(currentBlockNumber) + BigInt(blockPeriods.preActivationBlockPeriod);
+          const expectedActivationBlockTimestamp =
+            BigInt(latestBlockTimestamp) + BigInt(timePeriods.preActivationTimePeriod);
 
-          expect(activationBlockNumber).to.equal(expectedActivationBlockNumber);
+          expect(activationBlockTimestamp).to.equal(expectedActivationBlockTimestamp);
         });
 
-        it("Should get the old context suspended block number", async function () {
+        it("Should get the old context suspended block timestamp", async function () {
           // Wait for the pre activation period to pass
-          await refreshCoprocessorContextAfterBlockPeriod(blockPeriods.preActivationBlockPeriod, coprocessorContexts);
+          await refreshCoprocessorContextAfterTimePeriod(timePeriods.preActivationTimePeriod, coprocessorContexts);
 
-          // Get the current block number
-          const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
+          // Get the latest block timestamp
+          const latestBlockTimestamp = await time.latest();
 
-          const deactivatedBlockNumber =
-            await coprocessorContexts.getCoprocessorContextDeactivatedBlockNumber(contextId);
+          const deactivatedBlockTimestamp =
+            await coprocessorContexts.getCoprocessorContextDeactivatedBlockTimestamp(contextId);
 
-          const expectedDeactivatedBlockNumber = BigInt(currentBlockNumber) + BigInt(blockPeriods.suspendedBlockPeriod);
+          const expectedDeactivatedBlockTimestamp =
+            BigInt(latestBlockTimestamp) + BigInt(timePeriods.suspendedTimePeriod);
 
-          expect(deactivatedBlockNumber).to.equal(expectedDeactivatedBlockNumber);
+          expect(deactivatedBlockTimestamp).to.equal(expectedDeactivatedBlockTimestamp);
         });
       });
     });
@@ -349,8 +350,8 @@ describe("CoprocessorContexts", function () {
         const newCoprocessorContext = await addNewCoprocessorContext(3, coprocessorContexts, owner);
 
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(
-          newCoprocessorContext.blockPeriods.preActivationBlockPeriod,
+        await refreshCoprocessorContextAfterTimePeriod(
+          newCoprocessorContext.timePeriods.preActivationTimePeriod,
           coprocessorContexts,
         );
 
@@ -370,25 +371,25 @@ describe("CoprocessorContexts", function () {
       // Define new coprocessor context fields
       const newFeatureSet = 2030;
 
-      // Define new block periods
-      const newPreActivationBlockPeriod = 100;
-      const newSuspendedBlockPeriod = 100;
-      const newBlockPeriods: CoprocessorContextBlockPeriodsStruct = {
-        preActivationBlockPeriod: newPreActivationBlockPeriod,
-        suspendedBlockPeriod: newSuspendedBlockPeriod,
+      // Define new time periods
+      const newPreActivationTimePeriod = 100;
+      const newSuspendedTimePeriod = 100;
+      const newTimePeriods: CoprocessorContextTimePeriodsStruct = {
+        preActivationTimePeriod: newPreActivationTimePeriod,
+        suspendedTimePeriod: newSuspendedTimePeriod,
       };
 
       // Create a new set of coprocessors
       const { coprocessors: newCoprocessors } = createCoprocessors(7);
 
       it("Should add a new coprocessor context", async function () {
-        // Get the current block number
-        const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
+        // Get the latest block timestamp
+        const latestBlockTimestamp = await time.latest();
 
         // Add a new coprocessor context
         const txResult = await coprocessorContexts
           .connect(owner)
-          .addCoprocessorContext(newFeatureSet, newCoprocessors, newBlockPeriods);
+          .addCoprocessorContext(newFeatureSet, newCoprocessors, newTimePeriods);
 
         const oldCoprocessorContext: CoprocessorContextStruct = {
           contextId,
@@ -404,13 +405,13 @@ describe("CoprocessorContexts", function () {
           coprocessors: newCoprocessors,
         };
 
-        const expectedActivationBlockNumber = BigInt(currentBlockNumber) + BigInt(newPreActivationBlockPeriod);
+        const expectedActivationBlockTimestamp = BigInt(latestBlockTimestamp) + BigInt(newPreActivationTimePeriod);
 
         expect(txResult)
           .to.emit(coprocessorContexts, "NewCoprocessorContext")
-          .withArgs(oldCoprocessorContext, newCoprocessorContext, newBlockPeriods)
+          .withArgs(oldCoprocessorContext, newCoprocessorContext, newTimePeriods)
           .to.emit(coprocessorContexts, "PreActivateCoprocessorContext")
-          .withArgs(newCoprocessorContext, expectedActivationBlockNumber);
+          .withArgs(newCoprocessorContext, expectedActivationBlockTimestamp);
 
         // Check that the new context is in the pre-activation state
         expect(await coprocessorContexts.getCoprocessorContextStatus(newContextId)).to.equal(
@@ -423,7 +424,7 @@ describe("CoprocessorContexts", function () {
         await addNewCoprocessorContext(3, coprocessorContexts, owner);
 
         await expect(
-          coprocessorContexts.connect(owner).addCoprocessorContext(newFeatureSet, newCoprocessors, newBlockPeriods),
+          coprocessorContexts.connect(owner).addCoprocessorContext(newFeatureSet, newCoprocessors, newTimePeriods),
         )
           .to.be.revertedWithCustomError(coprocessorContexts, "PreActivationContextOngoing")
           .withArgs(newContextId);
@@ -434,13 +435,13 @@ describe("CoprocessorContexts", function () {
         const newCoprocessorContext = await addNewCoprocessorContext(3, coprocessorContexts, owner);
 
         // Wait for the pre activation period to pass
-        await refreshCoprocessorContextAfterBlockPeriod(
-          newCoprocessorContext.blockPeriods.preActivationBlockPeriod,
+        await refreshCoprocessorContextAfterTimePeriod(
+          newCoprocessorContext.timePeriods.preActivationTimePeriod,
           coprocessorContexts,
         );
 
         await expect(
-          coprocessorContexts.connect(owner).addCoprocessorContext(newFeatureSet, newCoprocessors, newBlockPeriods),
+          coprocessorContexts.connect(owner).addCoprocessorContext(newFeatureSet, newCoprocessors, newTimePeriods),
         )
           .to.be.revertedWithCustomError(coprocessorContexts, "SuspendedContextOngoing")
           .withArgs(contextId);
@@ -448,7 +449,7 @@ describe("CoprocessorContexts", function () {
     });
 
     describe("Context status changes", function () {
-      let newBlockPeriods: CoprocessorContextBlockPeriodsStruct;
+      let newTimePeriods: CoprocessorContextTimePeriodsStruct;
 
       // Define the new expected context ID
       const newContextId = 2;
@@ -456,25 +457,25 @@ describe("CoprocessorContexts", function () {
       beforeEach(async function () {
         // Add a new coprocessor context
         const newCoprocessorContext = await addNewCoprocessorContext(3, coprocessorContexts, owner);
-        newBlockPeriods = newCoprocessorContext.blockPeriods;
+        newTimePeriods = newCoprocessorContext.timePeriods;
       });
 
       it("Should activate the new context and suspend the old one", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(newBlockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(newTimePeriods.preActivationTimePeriod);
 
-        // Get the current block number
-        const currentBlockNumber = await hre.ethers.provider.getBlockNumber();
+        // Get the latest block timestamp
+        const latestBlockTimestamp = await time.latest();
 
         // Refresh the statuses of the coprocessor contexts: this suspends the old context and activates the new one
         const txResult = await coprocessorContexts.refreshCoprocessorContextStatuses();
 
-        const expectedDeactivatedBlockNumber =
-          BigInt(currentBlockNumber) + BigInt(newBlockPeriods.suspendedBlockPeriod);
+        const expectedDeactivatedBlockTimestamp =
+          BigInt(latestBlockTimestamp) + BigInt(newTimePeriods.suspendedTimePeriod);
 
         expect(txResult)
           .to.emit(coprocessorContexts, "SuspendCoprocessorContext")
-          .withArgs(contextId, expectedDeactivatedBlockNumber)
+          .withArgs(contextId, expectedDeactivatedBlockTimestamp)
           .to.emit(coprocessorContexts, "ActivateCoprocessorContext")
           .withArgs(newContextId);
 
@@ -486,14 +487,14 @@ describe("CoprocessorContexts", function () {
       });
 
       it("Should deactivate the suspended context", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(newBlockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(newTimePeriods.preActivationTimePeriod);
 
         // Refresh the statuses of the coprocessor contexts: this suspends the old context
         await coprocessorContexts.refreshCoprocessorContextStatuses();
 
-        // Then mine the number of blocks required for the suspended period to pass
-        await mine(newBlockPeriods.suspendedBlockPeriod);
+        // Increase the block timestamp to reach the end of the suspended period
+        await time.increase(newTimePeriods.suspendedTimePeriod);
 
         // Refresh the statuses of the coprocessor contexts once again: this deactivates the old context
         const txResult = await coprocessorContexts.refreshCoprocessorContextStatuses();
@@ -505,8 +506,8 @@ describe("CoprocessorContexts", function () {
       });
 
       it("Should compromise the suspended context", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(newBlockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(newTimePeriods.preActivationTimePeriod);
 
         // Refresh the statuses of the coprocessor contexts: this suspends the old context
         await coprocessorContexts.refreshCoprocessorContextStatuses();
@@ -526,8 +527,8 @@ describe("CoprocessorContexts", function () {
       });
 
       it("Should destroy the suspended context", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(newBlockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(newTimePeriods.preActivationTimePeriod);
 
         // Refresh the statuses of the coprocessor contexts: this suspends the old context
         await coprocessorContexts.refreshCoprocessorContextStatuses();
@@ -547,8 +548,8 @@ describe("CoprocessorContexts", function () {
       });
 
       it("Should move the suspended context to the active context", async function () {
-        // Mine the number of blocks required for the pre-activation period to pass
-        await mine(newBlockPeriods.preActivationBlockPeriod);
+        // Increase the block timestamp to reach the end of the pre-activation period
+        await time.increase(newTimePeriods.preActivationTimePeriod);
 
         // Refresh the statuses of the coprocessor contexts: this suspends the old context
         await coprocessorContexts.refreshCoprocessorContextStatuses();

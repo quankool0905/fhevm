@@ -78,7 +78,7 @@ describe("Upgrades", function () {
     const multichainAcl = await upgrades.upgradeProxy(emptyUUPS, multichainAclFactoryV1);
     await multichainAcl.waitForDeployment();
     const ownerBef = await multichainAcl.owner();
-    expect(await multichainAcl.getVersion()).to.equal("MultichainAcl v0.1.0");
+    expect(await multichainAcl.getVersion()).to.equal("MultichainAcl v0.2.0");
     const multichainAclV2 = await upgrades.upgradeProxy(multichainAcl, multichainAclFactoryV2);
     await multichainAclV2.waitForDeployment();
     const ownerAft = await multichainAclV2.owner();
@@ -150,7 +150,7 @@ describe("Upgrades", function () {
     });
     const kmsManagement = await upgrades.upgradeProxy(emptyUUPS, kmsManagementFactoryV1);
     await kmsManagement.waitForDeployment();
-    expect(await kmsManagement.getVersion()).to.equal("KmsManagement v0.1.0");
+    expect(await kmsManagement.getVersion()).to.equal("KmsManagement v0.2.0");
     const kmsManagementV2 = await upgrades.upgradeProxy(kmsManagement, kmsManagementFactoryV2);
     await kmsManagementV2.waitForDeployment();
     expect(await kmsManagementV2.getVersion()).to.equal("KmsManagement v1000.0.0");
@@ -163,7 +163,7 @@ describe("Upgrades", function () {
     });
     const inputVerification = await upgrades.upgradeProxy(emptyUUPS, inputVerificationFactoryV1);
     await inputVerification.waitForDeployment();
-    expect(await inputVerification.getVersion()).to.equal("InputVerification v0.1.0");
+    expect(await inputVerification.getVersion()).to.equal("InputVerification v0.2.0");
     const inputVerificationV2 = await upgrades.upgradeProxy(inputVerification, inputVerificationFactoryV2);
     await inputVerificationV2.waitForDeployment();
     expect(await inputVerificationV2.getVersion()).to.equal("InputVerification v1000.0.0");

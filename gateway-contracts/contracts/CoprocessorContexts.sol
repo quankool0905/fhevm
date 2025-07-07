@@ -7,7 +7,7 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import "./shared/Pausable.sol";
 import { ContextLifecycle } from "./libraries/ContextLifecycle.sol";
-import { CoprocessorContext, CoprocessorContextBlockPeriods } from "./shared/Structs.sol";
+import { CoprocessorContext, CoprocessorContextTimePeriods } from "./shared/Structs.sol";
 import { ContextStatus } from "./shared/Enums.sol";
 import { UUPSUpgradeableEmptyProxy } from "./shared/UUPSUpgradeableEmptyProxy.sol";
 
@@ -49,12 +49,12 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
         mapping(uint256 contextId => mapping(address coprocessorSignerAddress => bool isCoprocessorSigner)) isCoprocessorSigner;
         /// @notice The coprocessors' signer address list per context
         mapping(uint256 contextId => address[] coprocessorSignerAddresses) coprocessorSignerAddresses;
-        /// @notice The block number at which the coprocessor context is activated
-        mapping(uint256 contextId => uint256 activationBlockNumber) coprocessorContextActivationBlockNumber;
-        /// @notice The block number at which the coprocessor context is deactivated
-        mapping(uint256 contextId => uint256 deactivatedBlockNumber) coprocessorContextDeactivatedBlockNumber;
-        /// @notice The suspended block period for the coprocessor context
-        mapping(uint256 contextId => uint256 suspendedBlockPeriod) coprocessorContextSuspendedBlockPeriod;
+        /// @notice The block timestamp at which the coprocessor context is activated
+        mapping(uint256 contextId => uint256 activationBlockTimestamp) coprocessorContextActivationBlockTimestamp;
+        /// @notice The block timestamp at which the coprocessor context is deactivated
+        mapping(uint256 contextId => uint256 deactivatedBlockTimestamp) coprocessorContextDeactivatedBlockTimestamp;
+        /// @notice The suspended time period for the coprocessor context
+        mapping(uint256 contextId => uint256 suspendedTimePeriod) coprocessorContextSuspendedTimePeriod;
     }
 
     // Storage location has been computed using the following command:
@@ -185,7 +185,7 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
     function addCoprocessorContext(
         uint256 featureSet,
         Coprocessor[] calldata coprocessors,
-        CoprocessorContextBlockPeriods calldata blockPeriods
+        CoprocessorContextTimePeriods calldata timePeriods
     ) external virtual onlyOwner {
         CoprocessorContextsStorage storage $ = _getCoprocessorContextsStorage();
         // This will revert if there is no active coprocessor context. Although this should never
@@ -204,7 +204,7 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
         );
 
         // Emit the event that indicates that a valid coprocessor context has been suggested to be added.
-        emit NewCoprocessorContext(activeCoprocessorContext, newCoprocessorContext, blockPeriods);
+        emit NewCoprocessorContext(activeCoprocessorContext, newCoprocessorContext, timePeriods);
 
         // Set the coprocessor context to the generating state
         // This currently has no implications on the coprocessor contexts, except that it will check
@@ -217,18 +217,17 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
         // Directly pre-activate the coprocessor context
         ContextLifecycle.setPreActivation($.coprocessorContextLifecycle, newCoprocessorContext.contextId);
 
-        // Define the activation block number for the new coprocessor context
-        uint256 activationBlockNumber = block.number + blockPeriods.preActivationBlockPeriod;
-        $.coprocessorContextActivationBlockNumber[newCoprocessorContext.contextId] = activationBlockNumber;
+        // Define the activation block timestamp for the new coprocessor context
+        uint256 activationBlockTimestamp = block.timestamp + timePeriods.preActivationTimePeriod;
+        $.coprocessorContextActivationBlockTimestamp[newCoprocessorContext.contextId] = activationBlockTimestamp;
 
-        // Store the suspended block period for the previous coprocessor context
+        // Store the suspended time period for the previous coprocessor context
         // This value will be considered once the new coprocessor context is activated and the old one
         // is suspended
-        $.coprocessorContextSuspendedBlockPeriod[activeCoprocessorContext.contextId] = blockPeriods
-            .suspendedBlockPeriod;
+        $.coprocessorContextSuspendedTimePeriod[activeCoprocessorContext.contextId] = timePeriods.suspendedTimePeriod;
 
         // Emit the event that indicates that the new coprocessor context has been pre-activated
-        emit PreActivateCoprocessorContext(newCoprocessorContext, activationBlockNumber);
+        emit PreActivateCoprocessorContext(newCoprocessorContext, activationBlockTimestamp);
     }
 
     /**
@@ -242,17 +241,18 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
         uint256 preActivationContextId = $.coprocessorContextLifecycle.preActivationContextId;
         if (
             preActivationContextId != 0 &&
-            block.number >= $.coprocessorContextActivationBlockNumber[preActivationContextId]
+            block.timestamp >= $.coprocessorContextActivationBlockTimestamp[preActivationContextId]
         ) {
             uint256 activeContextId = getActiveCoprocessorContextId();
 
-            // Define the deactivation block number for the current active coprocessor context
-            uint256 deactivatedBlockNumber = block.number + $.coprocessorContextSuspendedBlockPeriod[activeContextId];
-            $.coprocessorContextDeactivatedBlockNumber[activeContextId] = deactivatedBlockNumber;
+            // Define the deactivation block timestamp for the current active coprocessor context
+            uint256 deactivatedBlockTimestamp = block.timestamp +
+                $.coprocessorContextSuspendedTimePeriod[activeContextId];
+            $.coprocessorContextDeactivatedBlockTimestamp[activeContextId] = deactivatedBlockTimestamp;
 
             // Set the current active coprocessor context to the suspended state
             ContextLifecycle.setSuspended($.coprocessorContextLifecycle, activeContextId);
-            emit SuspendCoprocessorContext(activeContextId, deactivatedBlockNumber);
+            emit SuspendCoprocessorContext(activeContextId, deactivatedBlockTimestamp);
 
             // Set the new active coprocessor context
             ContextLifecycle.setActive($.coprocessorContextLifecycle, preActivationContextId);
@@ -261,7 +261,10 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
 
         // Check if there is a suspended coprocessor context and if it is time to deactivate it
         uint256 suspendedContextId = _getSuspendedCoprocessorContextId();
-        if (suspendedContextId != 0 && block.number >= $.coprocessorContextDeactivatedBlockNumber[suspendedContextId]) {
+        if (
+            suspendedContextId != 0 &&
+            block.timestamp >= $.coprocessorContextDeactivatedBlockTimestamp[suspendedContextId]
+        ) {
             ContextLifecycle.setDeactivated($.coprocessorContextLifecycle, suspendedContextId);
             emit DeactivateCoprocessorContext(suspendedContextId);
         }
@@ -354,23 +357,23 @@ contract CoprocessorContexts is ICoprocessorContexts, Ownable2StepUpgradeable, U
     }
 
     /**
-     * @dev See {ICoprocessorContexts-getCoprocessorContextActivationBlockNumber}.
+     * @dev See {ICoprocessorContexts-getCoprocessorContextActivationBlockTimestamp}.
      */
-    function getCoprocessorContextActivationBlockNumber(
+    function getCoprocessorContextActivationBlockTimestamp(
         uint256 contextId
     ) external view virtual ensureContextInitialized(contextId) returns (uint256) {
         CoprocessorContextsStorage storage $ = _getCoprocessorContextsStorage();
-        return $.coprocessorContextActivationBlockNumber[contextId];
+        return $.coprocessorContextActivationBlockTimestamp[contextId];
     }
 
     /**
-     * @dev See {ICoprocessorContexts-getCoprocessorContextDeactivatedBlockNumber}.
+     * @dev See {ICoprocessorContexts-getCoprocessorContextDeactivatedBlockTimestamp}.
      */
-    function getCoprocessorContextDeactivatedBlockNumber(
+    function getCoprocessorContextDeactivatedBlockTimestamp(
         uint256 contextId
     ) external view virtual ensureContextInitialized(contextId) returns (uint256) {
         CoprocessorContextsStorage storage $ = _getCoprocessorContextsStorage();
-        return $.coprocessorContextDeactivatedBlockNumber[contextId];
+        return $.coprocessorContextDeactivatedBlockTimestamp[contextId];
     }
 
     /**
