@@ -188,7 +188,7 @@ describe("CiphertextCommits", function () {
       // 1st and 3rd one
       await expect(resultTx3)
         .to.emit(ciphertextCommits, "AddCiphertextMaterial")
-        .withArgs(ctHandle, ciphertextDigest, snsCiphertextDigest, [
+        .withArgs(ctHandle, contextId, ciphertextDigest, snsCiphertextDigest, [
           coprocessorTxSenders[0].address,
           coprocessorTxSenders[2].address,
         ]);

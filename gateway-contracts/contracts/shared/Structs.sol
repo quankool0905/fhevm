@@ -117,3 +117,13 @@ struct DelegationAccounts {
     /// @notice The address of the account that receives the delegation.
     address delegatedAddress;
 }
+
+// ----------------------------------------------------------------------------------------------
+// DEPRECATED
+// ----------------------------------------------------------------------------------------------
+
+struct DeprecatedCoprocessor {
+    address txSenderAddress;
+    address signerAddress;
+    string s3BucketUrl;
+}

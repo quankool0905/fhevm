@@ -100,13 +100,6 @@ task("task:deployEmptyUUPSProxies").setAction(async function (_, { ethers, upgra
     address: gatewayConfigAddress,
   });
 
-  console.log("Deploying an EmptyUUPS proxy contract for CoprocessorContexts...");
-  const coprocessorContextsAddress = await deployEmptyUUPS(ethers, upgrades, deployer);
-  await run("task:setContractAddress", {
-    name: "CoprocessorContexts",
-    address: coprocessorContextsAddress,
-  });
-
   console.log("Deploying an EmptyUUPS proxy contract for KmsManagement...");
   const kmsManagementAddress = await deployEmptyUUPS(ethers, upgrades, deployer);
   await run("task:setContractAddress", {
@@ -119,5 +112,12 @@ task("task:deployEmptyUUPSProxies").setAction(async function (_, { ethers, upgra
   await run("task:setContractAddress", {
     name: "InputVerification",
     address: inputVerificationAddress,
+  });
+
+  console.log("Deploying an EmptyUUPS proxy contract for CoprocessorContexts...");
+  const coprocessorContextsAddress = await deployEmptyUUPS(ethers, upgrades, deployer);
+  await run("task:setContractAddress", {
+    name: "CoprocessorContexts",
+    address: coprocessorContextsAddress,
   });
 });

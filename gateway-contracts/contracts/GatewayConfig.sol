@@ -77,7 +77,7 @@ contract GatewayConfig is IGatewayConfig, Ownable2StepUpgradeable, UUPSUpgradeab
         // Coprocessors state variables (deprecated):
         // ----------------------------------------------------------------------------------------------
         /// @notice The coprocessors' metadata
-        mapping(address coprocessorTxSenderAddress => Coprocessor coprocessor) coprocessors; // deprecated
+        mapping(address coprocessorTxSenderAddress => DeprecatedCoprocessor coprocessor) coprocessors; // deprecated
         /// @notice The coprocessors' transaction sender address list
         address[] coprocessorTxSenderAddresses; // deprecated
         /// @notice The coprocessors' signer address list
