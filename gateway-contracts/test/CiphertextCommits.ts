@@ -135,7 +135,7 @@ describe("CiphertextCommits", function () {
       // Check 2nd call event: it should only contain the 2 coprocessor transaction sender addresses
       await expect(resultTx2)
         .to.emit(ciphertextCommits, "AddCiphertextMaterial")
-        .withArgs(ctHandle, contextId, ciphertextDigest, snsCiphertextDigest, [
+        .withArgs(ctHandle, ciphertextDigest, snsCiphertextDigest, [
           coprocessorTxSenders[0].address,
           coprocessorTxSenders[1].address,
         ]);
@@ -188,7 +188,7 @@ describe("CiphertextCommits", function () {
       // 1st and 3rd one
       await expect(resultTx3)
         .to.emit(ciphertextCommits, "AddCiphertextMaterial")
-        .withArgs(ctHandle, contextId, ciphertextDigest, snsCiphertextDigest, [
+        .withArgs(ctHandle, ciphertextDigest, snsCiphertextDigest, [
           coprocessorTxSenders[0].address,
           coprocessorTxSenders[2].address,
         ]);
@@ -302,7 +302,7 @@ describe("CiphertextCommits", function () {
 
         await expect(result)
           .to.emit(ciphertextCommits, "AddCiphertextMaterial")
-          .withArgs(ctHandle, contextId, ciphertextDigest, snsCiphertextDigest, [
+          .withArgs(ctHandle, ciphertextDigest, snsCiphertextDigest, [
             coprocessorTxSenders[0].address,
             coprocessorTxSenders[1].address,
           ]);

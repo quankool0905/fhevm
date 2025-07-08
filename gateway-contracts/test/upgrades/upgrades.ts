@@ -150,7 +150,7 @@ describe("Upgrades", function () {
     });
     const kmsManagement = await upgrades.upgradeProxy(emptyUUPS, kmsManagementFactoryV1);
     await kmsManagement.waitForDeployment();
-    expect(await kmsManagement.getVersion()).to.equal("KmsManagement v0.2.0");
+    expect(await kmsManagement.getVersion()).to.equal("KmsManagement v0.1.0");
     const kmsManagementV2 = await upgrades.upgradeProxy(kmsManagement, kmsManagementFactoryV2);
     await kmsManagementV2.waitForDeployment();
     expect(await kmsManagementV2.getVersion()).to.equal("KmsManagement v1000.0.0");

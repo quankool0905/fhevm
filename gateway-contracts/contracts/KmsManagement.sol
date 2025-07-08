@@ -29,12 +29,12 @@ contract KmsManagement is
     /// @dev they can still define their own private constants with the same name.
     string private constant CONTRACT_NAME = "KmsManagement";
     uint256 private constant MAJOR_VERSION = 0;
-    uint256 private constant MINOR_VERSION = 2;
+    uint256 private constant MINOR_VERSION = 1;
     uint256 private constant PATCH_VERSION = 0;
 
     /// Constant used for making sure the version number using in the `reinitializer` modifier is
     /// identical between `initializeFromEmptyProxy` and the reinitializeVX` method
-    uint64 private constant REINITIALIZER_VERSION = 3;
+    uint64 private constant REINITIALIZER_VERSION = 2;
 
     /// @notice The contract's variable storage struct (@dev see ERC-7201)
     /// @custom:storage-location erc7201:fhevm_gateway.storage.KmsManagement
@@ -143,9 +143,6 @@ contract KmsManagement is
         $.fheParamsDigests[fheParamsName] = fheParamsDigest;
         $._fheParamsInitialized[fheParamsName] = true;
     }
-
-    /// @notice Re-initializes the contract from V1.
-    function reinitializeV2() external reinitializer(REINITIALIZER_VERSION) {}
 
     /// @dev Modifier to check if the given FHE params name is initialized
     modifier fheParamsInitialized(string calldata fheParamsName) {

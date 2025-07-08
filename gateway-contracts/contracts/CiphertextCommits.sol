@@ -193,7 +193,6 @@ contract CiphertextCommits is
 
             emit AddCiphertextMaterial(
                 ctHandle,
-                contextId,
                 ciphertextDigest,
                 snsCiphertextDigest,
                 $._coprocessorTxSenderAddresses[addCiphertextHash]

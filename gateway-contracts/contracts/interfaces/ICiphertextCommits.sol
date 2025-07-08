@@ -19,7 +19,6 @@ interface ICiphertextCommits {
      */
     event AddCiphertextMaterial(
         bytes32 indexed ctHandle,
-        uint256 indexed contextId,
         bytes32 ciphertextDigest,
         bytes32 snsCiphertextDigest,
         address[] coprocessorTxSenders
