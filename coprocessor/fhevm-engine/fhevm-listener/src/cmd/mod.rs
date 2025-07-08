@@ -632,8 +632,9 @@ pub async fn main(args: Args) {
             {
                 // TODO: filter on contract address if known
                 info!(tfhe_event = ?event, "TFHE event");
+                let log = Log {inner: event, ..log};
                 if let Some(ref mut db) = db {
-                    let res = db.insert_tfhe_event(&event).await;
+                    let res = db.insert_tfhe_event(&log).await;
                     if let Err(err) = res {
                         block_tfhe_errors += 1;
                         error!(error = %err, "Error inserting tfhe event");

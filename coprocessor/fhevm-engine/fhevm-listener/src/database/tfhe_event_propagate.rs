@@ -220,13 +220,14 @@ impl Database {
     #[rustfmt::skip]
     pub async fn insert_tfhe_event(
         &mut self,
-        event: &Log<TfheContractEvents>
+        log: &alloy_rpc_types::Log<TfheContractEvents>
     ) -> Result<(), SqlxError> {
         use TfheContract as C;
         use TfheContractEvents as E;
         const HAS_SCALAR : FixedBytes::<1> = FixedBytes([1]); // if any dependency is a scalar.
         const NO_SCALAR : FixedBytes::<1> = FixedBytes([0]); // if all dependencies are handles.
         // ciphertext type
+        let event = log.event();
         let ty = |to_type: &ToType| vec![*to_type];
         let as_bytes = |x: &ClearConst| x.to_be_bytes_vec();
         let tenant_id = self.tenant_id;
