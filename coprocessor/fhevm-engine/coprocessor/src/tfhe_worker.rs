@@ -117,15 +117,24 @@ async fn tfhe_worker_cycle(
         let now = std::time::SystemTime::now();
         let the_work = query!(
             "
-            SELECT tenant_id, output_handle, dependencies, fhe_operation, is_scalar
-            FROM computations
-            WHERE is_completed = false
-            AND is_error = false
-            ORDER BY schedule_order
-            LIMIT $1
+            WITH selected_computations AS (
+              SELECT cc.tenant_id, cc.output_handle, ah.handle
+              FROM ( SELECT tenant_id, output_handle, transaction_id, ROW_NUMBER() over (PARTITION BY transaction_id) AS rnum FROM computations
+                       WHERE is_completed = false
+                       AND is_error = false
+                       ORDER BY schedule_order
+                       LIMIT $1
+                   ) cc LEFT JOIN allowed_handles ah ON cc.transaction_id = ah.transaction_id
+              WHERE cc.rnum < $2
+            )
+            SELECT c.tenant_id, c.output_handle, c.dependencies, c.fhe_operation, c.is_scalar, sc.handle AS allowed_handle
+            FROM computations c, selected_computations sc
+            WHERE c.tenant_id = sc.tenant_id
+            AND c.output_handle = sc.output_handle
             FOR UPDATE SKIP LOCKED
         ",
-            args.work_items_batch_size as i32
+            args.work_items_batch_size as i32,
+	    10
         )
         .fetch_all(trx.as_mut())
         .await?;
