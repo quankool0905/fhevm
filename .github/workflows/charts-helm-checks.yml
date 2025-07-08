@@ -26,7 +26,7 @@ jobs:
           filters: |
             charts:
               - '.github/workflows/charts-helm-checks.yml'
-              - 'charts/charts/**'
+              - 'ccharts/**/Chart.yaml'
   lint:
     name: charts-helm-checks/lint
     needs: check-changes
