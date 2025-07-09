@@ -29,8 +29,7 @@ export SNS_WORKER_VERSION=${SNS_WORKER_VERSION:-"v0.7.5"}
 export ZKPROOF_WORKER_VERSION=${ZKPROOF_WORKER_VERSION:-"v0.7.5"}
 export TEST_SUITE_VERSION=${TEST_SUITE_VERSION:-"v0.7.5"}
 export CORE_VERSION=${CORE_VERSION:-"v0.11.0-rc17"}
-# TODO: do not leave this hardcoded
-export RELAYER_VERSION=${RELAYER_VERSION:-"8aa567a"}
+export RELAYER_VERSION=${RELAYER_VERSION:-"v0.1.0-rc14"}
 
 
 function print_logo() {
