@@ -127,7 +127,7 @@ async fn tfhe_worker_cycle(
                    ) cc LEFT JOIN allowed_handles ah ON cc.transaction_id = ah.transaction_id
               WHERE cc.rnum < $2
             )
-            SELECT c.tenant_id, c.output_handle, c.dependencies, c.fhe_operation, c.is_scalar, sc.handle AS allowed_handle
+            SELECT c.tenant_id, c.output_handle, c.dependencies, c.fhe_operation, c.is_scalar, sc.handle != NULL AS is_allowed
             FROM computations c, selected_computations sc
             WHERE c.tenant_id = sc.tenant_id
             AND c.output_handle = sc.output_handle

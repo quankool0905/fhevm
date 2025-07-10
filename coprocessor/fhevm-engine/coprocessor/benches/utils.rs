@@ -1,7 +1,8 @@
 use coprocessor::daemon_cli::Args;
+use fhevm_engine_common::types::AllowEvents;
 use fhevm_engine_common::utils::safe_deserialize_key;
 use rand::Rng;
-use sqlx::query;
+use sqlx::{query, Postgres};
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
 use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
@@ -164,7 +165,26 @@ async fn setup_test_app_custom_docker() -> Result<TestInstance, Box<dyn std::err
     })
 }
 
-pub async fn wait_until_all_ciphertexts_computed(
+pub async fn allow_handle(
+    handle: Vec<u8>,
+    pool: &sqlx::Pool<Postgres>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let tenant_id = default_tenant_id();
+    let account_address = String::new();
+    let event_type = AllowEvents::AllowedForDecryption;
+    let _query =
+            sqlx::query!(
+                "INSERT INTO allowed_handles(tenant_id, handle, account_address, event_type) VALUES($1, $2, $3, $4)
+                     ON CONFLICT DO NOTHING;",
+                tenant_id,
+                handle,
+                account_address,
+                event_type as i16,
+            ).execute(pool).await?;
+    Ok(())
+}
+
+pub async fn wait_until_all_allowed_handles_computed(
     db_url: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let pool = sqlx::postgres::PgPoolOptions::new()
@@ -174,7 +194,7 @@ pub async fn wait_until_all_ciphertexts_computed(
 
     loop {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        let count = sqlx::query!("SELECT count(1) FROM computations WHERE NOT is_completed")
+        let count = sqlx::query!("SELECT count(1) FROM computations JOIN allowed_handles ON output_handle = handle WHERE NOT is_completed")
             .fetch_one(&pool)
             .await?;
         let current_count = count.count.unwrap();
