@@ -6,12 +6,7 @@ pragma solidity ^0.8.24;
 contract CiphertextCommits {
     error CoprocessorAlreadyAdded(bytes32 ctHandle, address coprocessorTxSenderAddress);
 
-    event AddCiphertextMaterial(
-        bytes32 indexed ctHandle,
-        bytes32 ciphertextDigest,
-        bytes32 snsCiphertextDigest,
-        address[] coprocessorTxSenderAddresses
-    );
+    event AddCiphertextMaterial(bytes32 indexed ctHandle, bytes32 ciphertextDigest, bytes32 snsCiphertextDigest);
 
     bool alreadyAddedRevert;
 
@@ -29,11 +24,6 @@ contract CiphertextCommits {
             revert CoprocessorAlreadyAdded(ctHandle, msg.sender);
         }
 
-        emit AddCiphertextMaterial(
-            ctHandle,
-            ciphertextDigest,
-            snsCiphertextDigest,
-            new address[](0)
-        );
+        emit AddCiphertextMaterial(ctHandle, ciphertextDigest, snsCiphertextDigest);
     }
 }
